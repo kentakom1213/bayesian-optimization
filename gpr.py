@@ -1,6 +1,7 @@
 """ガウス過程回帰の実装
 """
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def rbf(theta_1: float, theta_2: float):
@@ -31,10 +32,18 @@ class GaussianProcessRegression:
         self.K = None
         # 共分散行列の逆行列
         self.Kinv = None
+        # trainデータ
+        self.x_train = None
+        self.y_train = None
+        self.N = None
 
     def fit(self, x_train, y_train):
-        N = len(x_train)
-        K = np.zeros((N, N))
+        # trainデータの保存
+        self.x_train = x_train
+        self.y_train = y_train
+        self.N = len(x_train)
+
+        K = np.zeros((self.N, self.N))
 
         # グリッドを生成
         row, col = np.meshgrid(x_train, x_train)
@@ -49,10 +58,22 @@ class GaussianProcessRegression:
         self.Kinv = Kinv
 
     def predict(self, x):
-        pass
+        row, col = np.meshgrid(x, self.x_train)
+
+        kx = self.kernel(row, col)
+
+        # 予測値の平均
+        mu = kx.T @ self.Kinv @ self.y_train
+
+        # 予測値の分散
+        var = self.kernel(x.T, x) - (kx.T @ self.Kinv @ kx)
+
+        return mu, var
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
     # RBFカーネル
     kernel = rbf(1, 1)
 
@@ -60,7 +81,22 @@ if __name__ == "__main__":
     gpr = GaussianProcessRegression(kernel)
 
     # テストデータ
-    x = np.linspace(0, 2 * np.pi, 100)
-    y = np.sin(x)
+    x = np.linspace(0, 2 * np.pi, 50) + np.random.normal(0, 0.05, 50)
+    y = np.sin(x) + np.random.normal(0, 0.1, 50)
 
     gpr.fit(x, y)
+
+    # 予測
+    x_test = np.linspace(0, 2 * np.pi, 1000)
+    mu, var = gpr.predict(x_test)
+
+    sigma = np.sqrt(var.diagonal())
+
+    fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
+
+    ax.plot(x_test, mu, label="mean")
+    ax.fill_between(x_test, mu - sigma, mu + sigma, alpha=0.5, label="std")
+    ax.scatter(x, y, label="train")
+    ax.legend()
+
+    fig.savefig("gpr.png")
