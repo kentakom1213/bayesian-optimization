@@ -18,7 +18,7 @@ def rbf(theta_1: float, theta_2: float):
     Returns:
         callable[(float, float), float]: 動径基底関数
     """
-    return lambda x, y: theta_1 * np.exp(- np.abs(x - y) / theta_2)
+    return lambda x, y: theta_1 * np.exp(- (x - y) ** 2 / theta_2)
 
 
 class GaussianProcessRegression:
@@ -81,22 +81,32 @@ if __name__ == "__main__":
     gpr = GaussianProcessRegression(kernel)
 
     # テストデータ
-    x = np.linspace(0, 2 * np.pi, 50) + np.random.normal(0, 0.05, 50)
-    y = np.sin(x) + np.random.normal(0, 0.1, 50)
+    SAMPLE = 7
+
+    x = np.linspace(0, 2 * np.pi, SAMPLE) + np.random.normal(0, 0.2, SAMPLE)
+    y = np.sin(x)
 
     gpr.fit(x, y)
 
     # 予測
-    x_test = np.linspace(0, 2 * np.pi, 1000)
+    x_test = np.linspace(-1, 2 * np.pi + 1, 900)
     mu, var = gpr.predict(x_test)
+
+    print(mu)
+    print(var)
 
     sigma = np.sqrt(var.diagonal())
 
     fig, ax = plt.subplots(figsize=(8, 6), dpi=100)
 
+    # サンプルパス
+    samples = np.random.multivariate_normal(mu, var / 900, 5)
+
     ax.plot(x_test, mu, label="mean")
+    ax.plot(x_test, samples.T, color="gray", alpha=0.5)
     ax.fill_between(x_test, mu - sigma, mu + sigma, alpha=0.5, label="std")
     ax.scatter(x, y, label="train")
     ax.legend()
+    ax.grid()
 
     fig.savefig("gpr.png")
